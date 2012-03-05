@@ -14,10 +14,9 @@ var win1 = Titanium.UI.createWindow({
 
 
 var label1 = Titanium.UI.createLabel({
-	color:'#999',
+	color:'EEE',
 	text: 'Photo Share: \nEmail, Facebook & Twitter',
-	font:{fontSize:16,fontFamily:'Helvetica Neue',fontWeight:'bold'},
-	textAlign:'center',
+	font:{fontSize:20,fontFamily:'Helvetica Neue',fontWeight:'bold'},
 	width:'auto',
 	top:20,
 	left:20
@@ -109,9 +108,21 @@ win1.open();
 //************************Function****************************//
 //create email 
 function postToEmail() {
+	
+	//get or create app data direction
+	var newDir = Titanium.Filesystem.getFile(Titanium.Filesystem.applicationDataDirectory,'attachments');
+	if(!newDir.exists())
+	{
+		newDir.createDirectory();
+	}
+	//create temp image file from selected image
+	var writeFile = Titanium.Filesystem.getFile(newDir.nativePath,'temp-image.jpg');
+	writeFile.write(selectedImage);
+	
 	var emailDialog = Titanium.UI.createEmailDialog(); 
 	emailDialog.subject = titleTextField.value;
 	emailDialog.toRecipients = ['info@packtpub.com'];
 	emailDialog.messageBody = messageTextArea.value;
+	emailDialog.addAttachment(writeFile);
 	emailDialog.open();
 }
