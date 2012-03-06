@@ -1,3 +1,5 @@
+Ti.include('birdhouse.js');
+
 // this sets the background color of the master UIView (when there are no windows/tab groups on it)
 Titanium.UI.setBackgroundColor('#000');
 
@@ -103,6 +105,24 @@ emailButton.addEventListener('click', function(e){
 
 win1.add(emailButton);
 
+var twitterButton = Titanium.UI.createButton({
+	width: 280,
+	height: 35,
+	top: 375,
+	left: 20,
+	title: 'Send Via Twitter' 
+});
+
+twitterButton.addEventListener('click' , function(e){
+	if(selectedImage != null) {
+		postToTwitter(); 
+	} else {
+		alert('You must select an image first!'); 
+	}
+});
+	
+win1.add(twitterButton);
+
 win1.open();
 
 //************************Function****************************//
@@ -125,4 +145,14 @@ function postToEmail() {
 	emailDialog.messageBody = messageTextArea.value;
 	emailDialog.addAttachment(writeFile);
 	emailDialog.open();
+}
+
+//create twitter session and post a tweet 
+function postToTwitter()
+{
+	var BH = new BirdHouse({
+		consumer_key: "viVYG90RprGsE9l9jxUvw", consumer_secret: "QLW8pshoPf3t4YnexyT9X0HZEvhsjRP0ysyluighI"
+	});
+	//call the birdhouse authorize() method
+	BH.authorize();
 }
