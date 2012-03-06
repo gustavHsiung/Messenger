@@ -1,5 +1,8 @@
 Ti.include('birdhouse.js');
 
+var pWidth = Ti.Platform.displayCaps.platformWidth;
+var pHeight = Ti.Platform.displayCaps.platformHeight;
+
 // this sets the background color of the master UIView (when there are no windows/tab groups on it)
 Titanium.UI.setBackgroundColor('#000');
 
@@ -19,7 +22,7 @@ var label1 = Titanium.UI.createLabel({
 	color:'EEE',
 	text: 'Photo Share: \nEmail, Facebook & Twitter',
 	font:{fontSize:20,fontFamily:'Helvetica Neue',fontWeight:'bold'},
-	width:'auto',
+	width:300,
 	top:20,
 	left:20
 });
@@ -27,7 +30,7 @@ var label1 = Titanium.UI.createLabel({
 win1.add(label1);
 
 var thumbnailImage = Titanium.UI.createImageView({ 
-	width: 100,
+	width: pWidth/3,
 	height: 120,
 	left: 20,
 	top: 90, 
@@ -39,12 +42,13 @@ win1.add(thumbnailImage);
 
 //button to set photo as chosen one
 var imageChooseButton = Titanium.UI.createButton({
-	width:100,
-	height: 30,
+	width:	pWidth/3,
+	height: 40,
 	top: 220,
 	left: 20,
 	title: 'Choose'
 });
+
 imageChooseButton.addEventListener('click',function(e){
 	Titanium.Media.openPhotoGallery({
 		success:function(event)
@@ -68,10 +72,11 @@ win1.add(imageChooseButton);
 
 // Message inputs
 var titleTextField = Titanium.UI.createTextField({ 
-	width:	160,
-	height:	35,
-	left: 	140,
+	width:	pWidth/2,
+	height:	40,
+	left: 	20+pWidth/3+10,
 	top:	90,
+	font: {fontSize: 16}, 
 	value: 'Title...',
 	borderStyle: 2,
 	backgroundColor: '#fff'
@@ -79,21 +84,24 @@ var titleTextField = Titanium.UI.createTextField({
 win1.add(titleTextField);
 
 var messageTextArea = Titanium.UI.createTextArea({ 
-	width:	160,
+	width:	pWidth/2,
 	height: 120,
-	left:	140,
-	top: 130,
+	left: 	20+pWidth/3+10,
+	top: 	140,
 	value: 'Message ...',
-	font: {fontSize: 15}, borderStyle: 2, backgroundColor: '#fff'
+	font: {fontSize: 15}, 
+	borderStyle: 2, 
+	backgroundColor: '#fff'
 });
 win1.add(messageTextArea);
 
 var emailButton = Titanium.UI.createButton({
 	width: 280,
-	height: 35,
-	top: 280,
+	height: 40,
+	top: 300,
 	left: 20,
-	title: 'Send Via Email' });
+	title: 'Send Via Email' 
+});
 
 emailButton.addEventListener('click', function(e){ 
 	if(selectedImage != null) {
@@ -107,8 +115,8 @@ win1.add(emailButton);
 
 var twitterButton = Titanium.UI.createButton({
 	width: 280,
-	height: 35,
-	top: 375,
+	height: 40,
+	top: 350,
 	left: 20,
 	title: 'Send Via Twitter' 
 });
@@ -122,6 +130,21 @@ twitterButton.addEventListener('click' , function(e){
 });
 	
 win1.add(twitterButton);
+
+var facebookButton = Titanium.UI.createButton({ 
+	width: 280,
+	height: 40, 
+	top: 390,
+	left: 20,
+	title: 'Send Via Facebook' 
+});
+facebookButton.addEventListener('click', function(e){
+	 if(selectedImage != null) {
+		postToFacebook( ); 
+	} else{
+		alert('You must select an image first!'); }
+});
+win1.add( facebookButton) ;
 
 win1.open();
 
@@ -146,7 +169,43 @@ function postToEmail() {
 	emailDialog.addAttachment(writeFile);
 	emailDialog.open();
 }
-
+//create facebook session and post to fb 
+function postToFacebook() {
+//if the user is not logged in, do so, else post to wall
+	if(Titanium.Facebook.loggedIn == false) {
+		Titanium.Facebook.appid = '203212366445168'; 
+		Titanium.Facebook.permissions = ['publish_stream'];
+		Titanium.Facebook.addEventListener('login' ,function(e){
+			if(e.success) {
+				alert('You are now logged in!');
+			} else if(e.error) {
+				alert('Error: ' + e.error);
+			} else if(e.cancelled) {
+				alert('You cancelled the login');
+			}
+		});
+		//call the facebook authorize method to login
+		Titanium.API.info('>>>>>>>>>>>>>>>>>>>GO FB authorize');
+		Titanium.Facebook.authorize(); 
+	}else {
+		//post the photo after user confirmed 
+		var data = {
+			caption: ' I am post ing a photo to my facebook page! ' ,
+			picture: selectedImage
+		};
+		
+		Titanium.Facebook.requestWithGraphPath('me/photos' , data, "POST", function(e) {
+			if (e.success) {
+				alert( "Success! Your image has been posted to your Facebook wall.");
+				Ti.API.info("Success! The image you posted has the new ID: " + e.result); 
+			}else {
+				alert('Your image could not be posted to Facebook at this time. Try again later.');
+				Ti.API.error(e.error);
+			} 
+		});
+	} //end if else loggedIn 
+	
+}
 //create twitter session and post a tweet 
 function postToTwitter()
 {

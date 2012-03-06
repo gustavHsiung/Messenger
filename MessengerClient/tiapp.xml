@@ -37,4 +37,6 @@
     </iphone>
     <android xmlns:android="http://schemas.android.com/apk/res/android"/>
     <modules/>
+   <property name="ti.facebook.appid">203212366445168</property>
+
 </ti:app>
