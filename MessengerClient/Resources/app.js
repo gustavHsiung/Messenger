@@ -177,7 +177,7 @@ function postToFacebook() {
 		Titanium.Facebook.permissions = ['publish_stream'];
 		Titanium.Facebook.addEventListener('login' ,function(e){
 			if(e.success) {
-				alert('You are now logged in!');
+				alert('You are now logged in! Try send again!');
 			} else if(e.error) {
 				alert('Error: ' + e.error);
 			} else if(e.cancelled) {
