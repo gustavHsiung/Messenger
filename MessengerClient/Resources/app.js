@@ -210,8 +210,46 @@ function postToFacebook() {
 function postToTwitter()
 {
 	var BH = new BirdHouse({
-		consumer_key: "viVYG90RprGsE9l9jxUvw", consumer_secret: "QLW8pshoPf3t4YnexyT9X0HZEvhsjRP0ysyluighI"
+		consumer_key: "viVYG90RprGsE9l9jxUvw",
+		consumer_secret: "QLW8pshoPf3t4YnexyT9X0HZEvhsjRP0ysyluighI"
 	});
 	//call the birdhouse authorize() method
-	BH.authorize();
+	if(!BH.authorized){
+		BH.authorize();
+	}else{
+		var xhr = Titanium.Network.createHTTPClient();
+		xhr.open('POST','http://localhost:3000//photos');
+		xhr.onload = function(response) {
+			//the image upload method has finished 
+			if(this.responseText != '0')
+			{
+			}else{
+				alert('The upload did not work! Check your server settings.' ) ;
+			}	
+		};
+		xhr.onerror = function(e)
+		{
+     		Ti.API.info(e);
+		};
+		// send the data
+		var r = randomString(5) + '.jpg';
+		Ti.API.info(">>>>>>>>>>>>>>>>>>>>>> send:" +r);
+		
+		xhr.send({'media': selectedImage, 'randomFilename': r});
+	}
+	
+}
+
+function randomString(length) {
+    var chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXTZabcdefghiklmnopqrstuvwxyz'.split('');
+    
+    if (! length) {
+        length = Math.floor(Math.random() * chars.length);
+    }
+    
+    var str = '';
+    for (var i = 0; i < length; i++) {
+        str += chars[Math.floor(Math.random() * chars.length)];
+    }
+    return str;
 }
