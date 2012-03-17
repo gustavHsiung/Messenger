@@ -218,11 +218,17 @@ function postToTwitter()
 		BH.authorize();
 	}else{
 		var xhr = Titanium.Network.createHTTPClient();
+		xhr.setRequestHeader("Content-Type","multipart/form-data");
 		xhr.open('POST','http://localhost:3000//tweet');
 		xhr.onload = function(response) {
 			//the image upload method has finished 
 			if(this.responseText != '0')
 			{
+				Ti.API.info(">>>>>>>>>>>>>>>>>>>>>> responseText:" +this.responseText);
+		
+				BH.tweet(txtMessage.value + ' ' + this.responseText, function(){
+				alertDialog = Ti.UI.createAlertDialog({ message:'Tweet posted!'});
+				alertDialog.show(); });
 			}else{
 				alert('The upload did not work! Check your server settings.' ) ;
 			}	
@@ -236,6 +242,7 @@ function postToTwitter()
 		Ti.API.info(">>>>>>>>>>>>>>>>>>>>>> send:" +r);
 		
 		xhr.send({'media': selectedImage, 'randomFilename': r});
+		
 	}
 	
 }
