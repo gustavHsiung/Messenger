@@ -218,7 +218,7 @@ function postToTwitter()
 		BH.authorize();
 	}else{
 		var xhr = Titanium.Network.createHTTPClient();
-		xhr.open('POST','http://localhost:3000//photos');
+		xhr.open('POST','http://localhost:3000//tweet');
 		xhr.onload = function(response) {
 			//the image upload method has finished 
 			if(this.responseText != '0')
