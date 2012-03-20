@@ -214,19 +214,19 @@ function postToTwitter()
 		consumer_secret: "QLW8pshoPf3t4YnexyT9X0HZEvhsjRP0ysyluighI"
 	});
 	//call the birdhouse authorize() method
-	if(!BH.authorized){
+	if(BH.authorized === false){
 		BH.authorize();
 	}else{
 		var xhr = Titanium.Network.createHTTPClient();
 		xhr.setRequestHeader("Content-Type","multipart/form-data");
-		xhr.open('POST','http://localhost:3000//tweet');
+		xhr.open('POST','http://titotw.herokuapp.com/tweet');
 		xhr.onload = function(response) {
 			//the image upload method has finished 
 			if(this.responseText != '0')
 			{
 				Ti.API.info(">>>>>>>>>>>>>>>>>>>>>> responseText:" +this.responseText);
 		
-				BH.tweet(txtMessage.value + ' ' + this.responseText, function(){
+				BH.tweet('hihihi ' + this.responseText, function(){
 				alertDialog = Ti.UI.createAlertDialog({ message:'Tweet posted!'});
 				alertDialog.show(); });
 			}else{

@@ -24,16 +24,8 @@
 // --------------------------------------------------------
 
 // INCLUDES
-// iphone requires complete path
-//if (Ti.Platform.osname=='iphone') {
-	Ti.include('lib/oauth.js');
-	Ti.include('lib/sha1.js');
-//}
-// android will search the current directory for files
-/*else {
-	Ti.include('oauth.js');
-	Ti.include('sha1.js');
-}*/
+Ti.include('lib/oauth.js');
+Ti.include('lib/sha1.js');
 
 // THE CLASS
 function BirdHouse(params) {
@@ -55,6 +47,7 @@ function BirdHouse(params) {
 		request_verifier: "",
 		access_token: "",
 		access_token_secret: "",
+		shortener: {},
 		callback_url: ""
 	};
 	var accessor = {
@@ -63,6 +56,11 @@ function BirdHouse(params) {
 	};
 	var authorized = false;
 
+	var osname = Ti.Platform.osname;
+	if ( osname === 'ipad' ) {
+		osname = 'iphone';
+	}
+    
 	// --------------------------------------------------------
 	// set_message
 	//
@@ -143,7 +141,7 @@ function BirdHouse(params) {
 			fullscreen: true
 		});
 		// add close button on iPhone
-		if (Ti.Platform.osname=='iphone' && cfg.show_login_toolbar) {
+		if (osname=='iphone' && cfg.show_login_toolbar) {
 			var webView = Ti.UI.createWebView({
 				url: url,
 				scalesPageToFit: true,
@@ -183,6 +181,8 @@ function BirdHouse(params) {
 				backgroundColor: '#FFF'
 			});
 		}
+		webView.addEventListener('load', authorizeUICallback);
+       
 		var request_token = "";
 		var url_base = "";
 		var params = "";
@@ -194,6 +194,56 @@ function BirdHouse(params) {
 		win.add(webView);
 		win.open();
 
+		// looks for the PIN everytime the user clicks on the WebView to authorize the APP
+    	// currently works with TWITTER
+    	var authorizeUICallback = function(e){
+      Ti.API.debug('authorizeUILoaded');
+
+      var browser = e.source;
+      var viewport = [];
+      viewport.push('(function (){');
+      viewport.push('  var head = document.getElementsByTagName("head")[0];');
+      viewport.push('  var viewport = document.createElement("meta");');
+      viewport.push('  viewport.setAttribute("name", "viewport");');
+      viewport.push('  viewport.setAttribute("content", "initial-scale=1.0, maximum-scale=1.0, user-scalable=no");');
+      viewport.push('  head.appendChild(viewport);');
+      viewport.push('})()');
+      browser.evalJS(viewport.join('\n'));
+
+      var loc = browser.evalJS('(function (){return location.href})()');
+      Titanium.API.debug('webView location: ' + loc);
+
+	// Twitter service check
+      if('https://api.twitter.com/oauth/authorize' == loc){
+		 	Ti.API.debug('Twitter Authorisation');
+			setTimeout(function(){
+				var sourceCode = webView.evalJS("document.documentElement.innerHTML");
+				setTimeout(function(){
+					Ti.API.debug(sourceCode);
+					var reg = /(<code\b[^>]*>)([0-9]+)(<\/code>)/gi;
+					var ar = reg.exec(sourceCode);
+					// var pinMatch = sourceCode.match();
+					// Ti.API.info(ar[2]+ ' array match');
+					// Ti.API.info(ar+ ' full match');
+						if( ar[2] ){
+							pin = ar[2];
+							Ti.API.info('Found PIN code ' + pin + ' in source');
+						}
+						if(pin != ''){
+							if (receivePinCallback) setTimeout(receivePinCallback, 300);
+							var osname = Ti.Platform.osname; // cache information
+							if(osname === 'android') {
+								window.close();
+							}
+							destroyAuthorizeUI();
+						}
+						},1000); // End of pin timeout
+					},500); // End of main timout loop
+				
+				var val = webView.evalJS("document.getElementsByTagName('code').innerHTML");
+				// Ti.API.info(val);
+	      }
+    };
 
 		// since there is no difference between the 'success' or 'denied' page apart from content,
 		// we need to wait and see if Twitter redirects to the callback to determine success
@@ -472,6 +522,7 @@ function BirdHouse(params) {
 			
 			// on success, grab the request token
 			XHR.onload = function() {
+				Ti.API.debug("api response " + XHR.responseText);
 
 				// execute the callback function
 				if (typeof(callback)=='function') {
@@ -483,15 +534,23 @@ function BirdHouse(params) {
 
 			// on error, show message
 			XHR.onerror = function(e) {
+				var message = null;
+				try {
+					message = JSON.parse(XHR.responseText).error;
+				}
+				catch (e) {
+				}
+				Ti.API.debug("api error " + XHR.status + (message ? ', ' + message : ''));
 				// execute the callback function
 				if (typeof(callback)=='function') {
-					callback(false);
+					callback(false, message);
 				}
 
 				return false;
 			}
 			
 			XHR.open(method, finalUrl, false);
+			Ti.API.debug("api " + method + " " + finalUrl);
 
 			// if we are getting request tokens do not set the HTML header
 			if (typeof(setHeader)=='undefined' || setHeader==true) {
@@ -503,10 +562,11 @@ function BirdHouse(params) {
 					} else {
 						header = header + ",";
 					}
-					header = header + message.parameters[i][0] + '="' + escape(message.parameters[i][1]) + '"';
+					header = header + message.parameters[i][0] + '="' + Ti.Network.encodeURIComponent(message.parameters[i][1]) + '"';
 				}
 
 				XHR.setRequestHeader("Authorization", header);
+				Ti.API.debug("api Authorization: " + header);
 			}
 			
 			XHR.send();
@@ -538,7 +598,7 @@ function BirdHouse(params) {
 
 		var obj = this;
 		obj.mytweet = text;
-		if (authorized === false) {
+		if (authorized == false) {
 			authorize(function(resp){
 				if (resp) {
 					obj.tweet(obj.mytweet);
@@ -564,7 +624,7 @@ function BirdHouse(params) {
 
 			// the UI window looks completely different on iPhone vs. Android
 			// iPhone UI
-			if (Ti.Platform.osname=='iphone') {
+			if (osname=='iphone') {
 				var winTW = Titanium.UI.createWindow({
 					height:((Ti.Platform.displayCaps.platformHeight*0.5)-15), // half because the keyboard takes up half
 					width:(Ti.Platform.displayCaps.platformWidth-20),
@@ -666,17 +726,17 @@ function BirdHouse(params) {
 				charcount.text = parseInt(chars)+'';
 			});
 			btnTW.addEventListener('click',function() {
-				send_tweet("status="+escape(tweet.value),function(retval){
+				send_tweet("status="+escape(tweet.value),function(retval, message){
 					if (retval===false) {
 						// execute the callback function
 						if (typeof(callback)=='function') {
-							callback(false);
+							callback(false, message);
 						}
 
 						return false;
 					} else {
 						// hide the keyboard on Android because it doesn't automatically
-						if (Ti.Platform.osname=='android') {
+						if (osname=='android') {
 							Titanium.UI.Android.hideSoftKeyboard();
 						}
 
@@ -694,9 +754,15 @@ function BirdHouse(params) {
 			});
 			btnCancel.addEventListener('click',function() {
 				// hide the keyboard on Android because it doesn't automatically
-				if (Ti.Platform.osname=='android') {
+				if (osname=='android') {
 					Titanium.UI.Android.hideSoftKeyboard();
 				}
+				
+				// execute the callback function
+				if (typeof(callback)==='function') {
+					callback(false);
+				}
+				
 				winBG.close();
 				winTW.close();
 			});
@@ -739,7 +805,7 @@ function BirdHouse(params) {
 		if (authorized === false) {
 			authorize(function(resp){
 				if (resp) {
-					obj.tweet(obj.mytweet);
+					obj.short_tweet(obj.mytweet, callback);
 
 					return true;
 				} else {
@@ -762,7 +828,7 @@ function BirdHouse(params) {
 
 			// the UI window looks completely different on iPhone vs. Android
 			// iPhone UI
-			if (Ti.Platform.osname=='iphone') {
+			if (osname=='iphone') {
 				var winTW = Titanium.UI.createWindow({
 					height:((Ti.Platform.displayCaps.platformHeight*0.5)-15), // half because the keyboard takes up half
 					width:(Ti.Platform.displayCaps.platformWidth-20),
@@ -909,17 +975,17 @@ function BirdHouse(params) {
 				}
 			});
 			btnTW.addEventListener('click',function() {
-				send_tweet("status="+escape(tweet.value),function(retval){
+				send_tweet("status="+escape(tweet.value),function(retval, message){
 					if (retval===false) {
 						// execute the callback function
 						if (typeof(callback)=='function') {
-							callback(false);
+							callback(false, message);
 						}
 
 						return false;
 					} else {
 						// hide the keyboard on Android because it doesn't automatically
-						if (Ti.Platform.osname=='android') {
+						if (osname=='android') {
 							Titanium.UI.Android.hideSoftKeyboard();
 						}
 
@@ -937,9 +1003,15 @@ function BirdHouse(params) {
 			});
 			btnCancel.addEventListener('click',function() {
 				// hide the keyboard on Android because it doesn't automatically
-				if (Ti.Platform.osname=='android') {
+				if (osname=='android') {
 					Titanium.UI.Android.hideSoftKeyboard();
 				}
+				
+				// execute the callback function
+				if (typeof(callback)==='function') {
+					callback(false);
+				}
+				
 				winBG.close();
 				winTW.close();
 			});
@@ -964,7 +1036,7 @@ function BirdHouse(params) {
 	//	callback (Function) - function to call on completion
 	// --------------------------------------------------------
 	function send_tweet(params,callback) {
-		api('http://api.twitter.com/1/statuses/update.json','POST',params,function(resp){
+		api('http://api.twitter.com/1/statuses/update.json','POST',params,function(resp, message){
 			if (resp!=false) {
 				if (typeof(callback)=='function') {
 					callback(true);
@@ -972,7 +1044,7 @@ function BirdHouse(params) {
 				return true;
 			} else {
 				if (typeof(callback)=='function') {
-					callback(false);
+					callback(false, message);
 				}
 				return false;
 			}
@@ -983,48 +1055,118 @@ function BirdHouse(params) {
 	// --------------------------------------------------------
 	// shorten_url
 	//
-	// Shortens a URL using twe.ly.
+	// Shortens a URL.
 	//
 	// In Parameters:
 	//	url (String) - the url to shorten
+	//	callback (Function) - function to call on completion
 	//
 	// Returns:
-	//	shorturl (String) - the shortened URL, else false
-	//	callback (Function) - function to call on completion
+	//  nothing
 	// --------------------------------------------------------
 	function shorten_url(url,callback) {
+		if ( typeof callback === 'function' ) {
+			switch ( cfg.shortener.type ) {
+			case 'twely':
+				shorten_url_twely(url, callback);
+				break;
+			case 'bitly':
+				shorten_url_bitly(url, callback);
+				break;
+			default:
+				shorten_url_google(url, callback);
+				break;
+			}
+		}
+	}
 
-
+	function shorten_url_google(longurl, callback) {
 		var XHR = Titanium.Network.createHTTPClient();
-		XHR.open("GET","http://www.twe.ly/short.php?url="+url+"&json=1");
+		XHR.open("POST", "https://www.googleapis.com/urlshortener/v1/url");
+		XHR.setRequestHeader('Content-Type', 'application/json');
 		XHR.onload = function () {
+			var shorturl = false;
 			try {
-				shorturl = JSON.parse(XHR.responseText);
-			} catch(e) {
-				shorturl = false;
+				var response = JSON.parse(XHR.responseText);
+				if ( typeof response === 'object' && response.id ) {
+					shorturl = response.id;
+				}
 			}
-
-			if (shorturl!=false && shorturl.substr(0,5)=='Sorry') {
-				shorturl = false;
+			catch(e) {
+				Ti.API.info("Exception while shortening " + longurl);
 			}
-
-			if (typeof(callback)=='function') {
-				callback(shorturl,url);
-			}
-
-			return shorturl;
+			callback(shorturl, longurl);
 		};
-		XHR.onerror = function(e) {
+		XHR.onerror = function() {
+			Ti.API.info("Error while shortening " + longurl + " (" + XHR.status + ")");
+			callback(false);
+		};
+		XHR.send(JSON.stringify({longUrl: longurl}));
+	}
 
-			if (typeof(callback)=='function') {
-				callback(false);
+	function shorten_url_twely(longurl, callback) {
+		var XHR = Titanium.Network.createHTTPClient();
+		XHR.open("GET", "http://www.twe.ly/short.php?json=1&url=" + Ti.Network.encodeURIComponent(longurl));
+		XHR.onload = function () {
+			var shorturl = false;
+			try {
+				var response = JSON.parse(XHR.responseText);
+				if ( typeof response === 'string' && response.substr(0,5) !== 'Sorry' ) {
+					shorturl = reponse;
+				}
 			}
-
-			return false;
+			catch(e) {
+				Ti.API.info("Exception while shortening " + longurl);
+			}
+			callback(shorturl, longurl);
+		};
+		XHR.onerror = function() {
+			Ti.API.info("Error while shortening " + longurl + " (" + XHR.status + ")");
+			callback(false);
 		};
 		XHR.send();
 	}
-
+	
+	function shorten_url_bitly(longurl, callback) {
+		var XHR = Titanium.Network.createHTTPClient();
+		XHR.open("GET", "https://api-ssl.bitly.com/v3/shorten?login=" + cfg.shortener.username + "&apiKey=" + cfg.shortener.key + "&format=json&longUrl=" + Ti.Network.encodeURIComponent(longurl));
+		XHR.onload = function () {
+			var shorturl = false;
+			try {
+				var response = JSON.parse(XHR.responseText);
+				if ( typeof response === 'object' && response.status_code === 200 ) {
+					shorturl = response.data.url;
+				}
+			}
+			catch(e) {
+				Ti.API.info("Exception while shortening " + longurl);
+			}
+			callback(shorturl, longurl);
+		};
+		XHR.onerror = function() {
+			Ti.API.info("Error while shortening " + longurl + " (" + XHR.status + ")");
+			callback(false);
+		};
+		XHR.send();
+	}
+	
+	// --------------------------------------------------------
+	// set_shortener
+	//
+	// Configure the shortener to be used.
+	//
+	// In Parameters:
+	//	obj - object to configure the shortener
+	//	  type: string denoting the service used (e.g. 'google')
+	//    username: string with username (if needed)
+	//    key: string with ket (if needed)
+	//
+	// Returns: nothing
+	// --------------------------------------------------------
+	function set_shortener(_args) {
+		cfg.shortener = _args;
+	}
+	
 	// --------------------------------------------------------
 	// get_tweets
 	//
@@ -1126,7 +1268,7 @@ function BirdHouse(params) {
 
 		return !authorized;
 	}
-
+	
 	// --------------------------------------------------------
 	// ===================== PUBLIC ===========================
 	// --------------------------------------------------------
@@ -1138,6 +1280,7 @@ function BirdHouse(params) {
 	this.tweet = tweet;
 	this.short_tweet = short_tweet;
 	this.shorten_url = shorten_url;
+	this.set_shortener = set_shortener;
 
 	// --------------------------------------------------------
 	// =================== INITIALIZE =========================
@@ -1159,4 +1302,3 @@ function BirdHouse(params) {
 	}
 	authorized = load_access_token(); // load the token on startup to see if authorized
 };
-
