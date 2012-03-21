@@ -234,7 +234,7 @@ function BirdHouse(params) {
 							setTimeout(receivePinCallback, 300);
 							var osname = Ti.Platform.osname; // cache information
 							if(osname === 'android') {
-								window.close();
+							//	window.close();
 							}
 							//destroyAuthorizeUI();
 						}

@@ -223,8 +223,10 @@ function postToTwitter()
 }
 function uploadPhoto(BH)
 {
-		var xhr = Titanium.Network.createHTTPClient();
-		xhr.setRequestHeader("Content-Type","multipart/form-data");
+		var xhr = Titanium.Network.createHTTPClient({
+ 
+    		enableKeepAlive:false
+		});
 		xhr.open('POST','http://titotw.herokuapp.com/tweet');
 		
 		xhr.onload = function(response) {
@@ -241,7 +243,6 @@ function uploadPhoto(BH)
 						
 					} 
 		      });
-	//			BH.tweet(messageTextArea.value +responseText );
 			}else{
 				alert('The upload did not work! Check your server settings.' ) ;
 			}	
