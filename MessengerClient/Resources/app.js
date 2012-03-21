@@ -214,21 +214,34 @@ function postToTwitter()
 		consumer_secret: "QLW8pshoPf3t4YnexyT9X0HZEvhsjRP0ysyluighI"
 	});
 	//call the birdhouse authorize() method
-	if(BH.authorized === false){
-		BH.authorize();
-	}else{
+	BH.authorize(function(){
+		if(BH.isAuthorized())
+		{
+			uploadPhoto(BH);
+		}
+	});
+}
+function uploadPhoto(BH)
+{
 		var xhr = Titanium.Network.createHTTPClient();
 		xhr.setRequestHeader("Content-Type","multipart/form-data");
 		xhr.open('POST','http://titotw.herokuapp.com/tweet');
+		
 		xhr.onload = function(response) {
 			//the image upload method has finished 
 			if(this.responseText != '0')
 			{
 				Ti.API.info(">>>>>>>>>>>>>>>>>>>>>> responseText:" +this.responseText);
-		
-				BH.tweet('hihihi ' + this.responseText, function(){
-				alertDialog = Ti.UI.createAlertDialog({ message:'Tweet posted!'});
-				alertDialog.show(); });
+				Ti.API.info(">>>>>>>>>>>>>>>>>>>>>> messageTextArea:" +messageTextArea.value);
+				BH.tweet(messageTextArea.value +" " +this.responseText ,function(result){
+	         		if(result){
+						alertDialog = Ti.UI.createAlertDialog({ message:'Tweet posted!'});
+						alertDialog.show();
+					}else{
+						
+					} 
+		      });
+	//			BH.tweet(messageTextArea.value +responseText );
 			}else{
 				alert('The upload did not work! Check your server settings.' ) ;
 			}	
@@ -242,9 +255,7 @@ function postToTwitter()
 		Ti.API.info(">>>>>>>>>>>>>>>>>>>>>> send:" +r);
 		
 		xhr.send({'media': selectedImage, 'randomFilename': r});
-		
-	}
-	
+
 }
 
 function randomString(length) {

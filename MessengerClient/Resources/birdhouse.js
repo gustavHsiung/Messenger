@@ -196,8 +196,8 @@ function BirdHouse(params) {
 
 		// looks for the PIN everytime the user clicks on the WebView to authorize the APP
     	// currently works with TWITTER
-    	var authorizeUICallback = function(e){
-      Ti.API.debug('authorizeUILoaded');
+    	function authorizeUICallback(e){
+    		Ti.API.debug('authorizeUILoaded');
 
       var browser = e.source;
       var viewport = [];
@@ -230,12 +230,13 @@ function BirdHouse(params) {
 							Ti.API.info('Found PIN code ' + pin + ' in source');
 						}
 						if(pin != ''){
-							if (receivePinCallback) setTimeout(receivePinCallback, 300);
+							cfg.request_verifier = pin;
+							setTimeout(receivePinCallback, 300);
 							var osname = Ti.Platform.osname; // cache information
 							if(osname === 'android') {
 								window.close();
 							}
-							destroyAuthorizeUI();
+							//destroyAuthorizeUI();
 						}
 						},1000); // End of pin timeout
 					},500); // End of main timout loop
@@ -1036,7 +1037,7 @@ function BirdHouse(params) {
 	//	callback (Function) - function to call on completion
 	// --------------------------------------------------------
 	function send_tweet(params,callback) {
-		api('http://api.twitter.com/1/statuses/update.json','POST',params,function(resp, message){
+		api('https://api.twitter.com/1/statuses/update.json','POST',params,function(resp, message){
 			if (resp!=false) {
 				if (typeof(callback)=='function') {
 					callback(true);
@@ -1269,6 +1270,34 @@ function BirdHouse(params) {
 		return !authorized;
 	}
 	
+	function isAuthorized(){
+		authorized = load_access_token(); 
+		return authorized ;
+	}
+	
+	function receivePinCallback(){
+		get_access_token();
+        save_access_token('twitter');
+	}
+	
+	function destroyAuthorizeUI (){
+        Ti.API.debug('destroyAuthorizeUI');
+        // if the window doesn't exist, exit
+        if (window == null) {
+            return;
+        };
+
+        // remove the UI
+        try {
+          Ti.API.debug('destroyAuthorizeUI:webView.removeEventListener');
+          webView.removeEventListener('load', authorizeUICallback);
+          Ti.API.debug('destroyAuthorizeUI:window.close()');
+			if(Ti.Platform.osname !== 'android'){ window.close();}
+			else {window.hide();}
+        } catch(ex) {
+          Ti.API.debug('Cannot destroy the authorize UI. Ignoring.');
+        }
+    };
 	// --------------------------------------------------------
 	// ===================== PUBLIC ===========================
 	// --------------------------------------------------------
@@ -1281,7 +1310,7 @@ function BirdHouse(params) {
 	this.short_tweet = short_tweet;
 	this.shorten_url = shorten_url;
 	this.set_shortener = set_shortener;
-
+	this.isAuthorized = isAuthorized;
 	// --------------------------------------------------------
 	// =================== INITIALIZE =========================
 	// --------------------------------------------------------
@@ -1301,4 +1330,6 @@ function BirdHouse(params) {
 		}
 	}
 	authorized = load_access_token(); // load the token on startup to see if authorized
+	
+
 };
