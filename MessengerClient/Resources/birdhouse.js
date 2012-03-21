@@ -194,13 +194,12 @@ function BirdHouse(params) {
 		win.add(webView);
 		win.open();
 
-		// looks for the PIN everytime the user clicks on the WebView to authorize the APP
-    	// currently works with TWITTER
-    	function authorizeUICallback(e){
-    		Ti.API.debug('authorizeUILoaded');
-
-      var browser = e.source;
-      var viewport = [];
+	// looks for the PIN everytime the user clicks on the WebView to authorize the APP
+   	// currently works with TWITTER
+    function authorizeUICallback(e){
+   		Ti.API.debug('authorizeUILoaded');
+   		var browser = e.source;
+   		var viewport = [];
       viewport.push('(function (){');
       viewport.push('  var head = document.getElementsByTagName("head")[0];');
       viewport.push('  var viewport = document.createElement("meta");');

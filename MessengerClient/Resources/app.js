@@ -164,7 +164,7 @@ function postToEmail() {
 	
 	var emailDialog = Titanium.UI.createEmailDialog(); 
 	emailDialog.subject = titleTextField.value;
-	emailDialog.toRecipients = ['info@packtpub.com'];
+	emailDialog.toRecipients = ['chiayuan_hsiung@infofab.com'];
 	emailDialog.messageBody = messageTextArea.value;
 	emailDialog.addAttachment(writeFile);
 	emailDialog.open();
